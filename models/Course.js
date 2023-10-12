@@ -36,7 +36,16 @@ const courseSchema = new mongoose.Schema({
       },
     },
   ],
-
+  poster: {
+    public_id: {
+      type: String,
+      required: true,
+    },
+    url: {
+      type: String,
+      required: true,
+    },
+  },
   views: {
     type: Number,
     default: 0,
@@ -51,7 +60,7 @@ const courseSchema = new mongoose.Schema({
   },
   createdBy: {
     type: String,
-    required: [true, "Enter course creator name"],
+    required: [true, "Enter Course Creator name"],
   },
   createdAt: {
     type: Date,
