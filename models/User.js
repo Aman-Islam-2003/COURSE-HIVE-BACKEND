@@ -1,3 +1,4 @@
+import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import validator from "validator";
 
@@ -50,5 +51,12 @@ const userSchema = new mongoose.Schema({
   ResetPasswordToken: String,
   ResetPasswordExpie: String,
 });
+
+userSchema.method.getJWTToken = function(){
+   return jwt.sign({id: this._id}, process.env.JWT_SECRET,{
+    expiresIn: "15d",
+   })
+   //first give payload the data you want to convert
+}
 
 export const User = mongoose.model("User", userSchema);
