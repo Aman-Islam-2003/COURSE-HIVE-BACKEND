@@ -21,7 +21,7 @@ export const register = catchAsyncError(async (req,res,next)=>{
        password,
        avatar:{
         public_id:"tempid",
-        url: tempurl
+        url: "tempurl",
        } 
     });
 
