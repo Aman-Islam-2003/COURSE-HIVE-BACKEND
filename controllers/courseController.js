@@ -2,6 +2,7 @@ import cookieParser from "cookie-parser";
 import { catchAsyncError } from "../middlewares/catchAsyncError.js";
 import { Course } from "../models/Course.js";
 import ErrorHandler from "../utils/errorHandler.js"
+import getDataUri from "../utils/dataUri.js";
 
 
 export const createCourse = catchAsyncError(async (req,res,next)=>{
@@ -10,6 +11,8 @@ export const createCourse = catchAsyncError(async (req,res,next)=>{
        return next(new ErrorHandler("Required fields can't be empty", 400))
    }
    const file = req.file;
+   
+   const fileUri = getDataUri(file);
     await Course.create({
       title,
       description,
