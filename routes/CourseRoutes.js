@@ -14,6 +14,7 @@ router.route("/createcourse").post(singleUpload, createCourse); // only admin ca
 //Add lecture
 router.route("/course/:id").get(getCourseLectures).post(singleUpload, addLecture);
 //Delete Lecture
+//router.route("/course/:id").delete(deleteLecture)
 //get course details
 //delete lecture
 
