@@ -26,7 +26,6 @@ export const register = catchAsyncError(async (req, res, next) => {
       url: "tempurl",
     },
   });
-
   sendToken(res, user, "Registered successfully", 201);
 });
 
