@@ -51,7 +51,7 @@ export const getCourseLectures = catchAsyncError(async (req,res,next) => {
     lectures: course.lectures,
    })
 });
-
+//Add Lecture
 export const addLecture = catchAsyncError(async (req,res,next) => {
    const {id} = req.params;
    const {title, description} = req.body;
