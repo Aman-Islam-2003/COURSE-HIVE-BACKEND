@@ -3,6 +3,7 @@ import { catchAsyncError } from "../middlewares/catchAsyncError.js";
 import { Course } from "../models/Course.js";
 import ErrorHandler from "../utils/errorHandler.js"
 import getDataUri from "../utils/dataUri.js";
+import cloudinary from "cloudinary";
 
 
 export const createCourse = catchAsyncError(async (req,res,next)=>{
@@ -13,14 +14,15 @@ export const createCourse = catchAsyncError(async (req,res,next)=>{
    const file = req.file;
    
    const fileUri = getDataUri(file);
+   const myCloud = await cloudinary.v2.uploader.upload(fileUri.content);
     await Course.create({
       title,
       description,
       category,
       createdBy,
       poster: {
-         public_id: "temp",
-         url: "temp"
+         public_id: myCloud.public_id,
+         url: myCloud.secure_url
       }
    });
 
