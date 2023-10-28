@@ -57,19 +57,24 @@ export const getCourseLectures = catchAsyncError(async (req,res,next) => {
 export const addLecture = catchAsyncError(async (req,res,next) => {
    const {id} = req.params;
    const {title, description} = req.body;
-   //const file = req.file;
+   
    const course = await Course.findById(id);
    if(!course){
       return next(new ErrorHandler("Course not found", 404))
    }
-   //upload file here
+   //max video size 100mb
+   const file = req.file;
+   const fileUri = getDataUri(file);
+   const mycloud = await cloudinary.v2.uploader.upload(fileUri.content, {
+      resource_type: "video",
+   });
 
    course.lectures.push({
       title,
       description,
       video: {
-        public_id: "url",
-        url: "url" 
+        public_id: mycloud.public_id,
+        url: mycloud.secure_url
       }
    });
 
@@ -82,3 +87,46 @@ export const addLecture = catchAsyncError(async (req,res,next) => {
    })
 });
 
+export const deleteCourse = catchAsyncError(async (req,res,next)=>{
+   const {id} = req.params;
+   const course = await Course.findById(id);
+
+   if(!course){
+      return next(new ErrorHandler("Course not found", 404));
+   }
+   await cloudinary.v2.uploader.destroy(course.poster.public_id);
+   for(let i=0; i<course.lectures.length; i++){
+      const singleLecture = course.lectures[i];
+      await cloudinary.v2.uploader.destroy(singleLecture.video.public_id), {
+         resource_type: "video",
+      };
+   }
+   await course.remove();
+   res.status(200).send({
+      success: true,
+      messgae: "Course deleted successfully"
+     })
+
+})
+
+export const deleteLecture = catchAsyncError(async (req,res,next)=>{
+   const {lectureId, courseId} = req.query;
+   const course = await Course.findById(courseId);
+   if(!course){
+      return next(new ErrorHandler("Course not found", 404));
+   }
+   const lecture = course.lectures.find((lecture)=>{
+      if(lecture._id.toString() === lectureId.toString()){
+        cloudinary.v2.uploader.destroy(lectures.video.public_id)
+      }
+   }) 
+    course.lectures = course.lectures.filter((lecture) => {
+      if(lecture._id.toString() !== lectureId.toString()){
+         return lecture;
+      }
+    });
+   res.status(200).send({
+      success: true,
+      messgae: "Lecture deleted successfully"
+     })
+})
