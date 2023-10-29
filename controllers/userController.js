@@ -6,6 +6,7 @@ import { sendEmail } from "../utils/sendEmail.js";
 import { sendToken } from "../utils/sendToken.js";
 import cloudinary from "cloudinary";
 import bcrypt from "bcrypt";
+import getDataUri from "../utils/dataUri.js";
 
 export const register = catchAsyncError(async (req, res, next) => {
   const { name, email, password } = req.body;
@@ -29,7 +30,7 @@ export const register = catchAsyncError(async (req, res, next) => {
     password,
     avatar: {
       public_id: myCloud.public_id,
-      url: myCloud.url,
+      url: myCloud.secure_url,
     },
   });
   sendToken(res, user, "Registered successfully", 201);
@@ -115,7 +116,20 @@ export const updateProfile = catchAsyncError(async (req, res, next) => {
 });
 
 export const updateProfilePicture = catchAsyncError(async (req, res, next) => {
-  //cloudinary
+
+  const file = req.file;
+  const user = await User.findById(req.user._id);
+
+  const fileUri = getDataUri(file);
+  const myCloud = await cloudinary.v2.uploader.upload(fileUri.content);
+
+  await cloudinary.v2.uploader.destroy(user.avatar.public_id);
+
+  user.avatar = {
+    public_id: myCloud.public_id,
+    url: myCloud.secure_url,
+  }
+  await user.save();
   res.status(200).json({
     success: true,
     message: "Profile Picture updated successfully",
@@ -204,4 +218,48 @@ export const removeFromPlaylist = catchAsyncError(async (req,res,next)=>{
       success: true,
       message: "Removed from playlist",
     });
+})
+
+//Admin Routes
+export const getAllUsers = catchAsyncError(async (req,res,next)=>{
+  const users = await User.find();
+
+  res.status(200).json({
+    success: true,
+    message: "Users retrived successfully",
+  });
+})
+
+export const updateUserRole = catchAsyncError(async (req,res,next)=>{
+  const user = await User.findById(req.params.id);
+  if(!user){
+    return next(new ErrorHandler("user doesn't exists", 401));
+  }
+
+  if(user.role != 'admin'){
+    user.role = "admin";
+  } else{
+    user.role = "user"
+  }
+
+ await user.save();
+  res.status(200).json({
+    success: true,
+    message: "Role updated successfully",
+  });
+})
+
+export const deleteUser = catchAsyncError(async (req,res,next)=>{
+  const user = await User.findById(req.params.id);
+  if(!user){
+    return next(new ErrorHandler("user doesn't exists", 401));
+  }
+
+  await cloudinary.v2.uploader.destroy(user.avatar.public_id);
+
+ await user.remove();
+  res.status(200).json({
+    success: true,
+    message: "User deleted successfully",
+  });
 })
