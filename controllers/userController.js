@@ -222,11 +222,12 @@ export const removeFromPlaylist = catchAsyncError(async (req,res,next)=>{
 
 //Admin Routes
 export const getAllUsers = catchAsyncError(async (req,res,next)=>{
-  const users = await User.find();
+  const users = await User.find({});
 
   res.status(200).json({
     success: true,
     message: "Users retrived successfully",
+    users
   });
 })
 
@@ -246,6 +247,7 @@ export const updateUserRole = catchAsyncError(async (req,res,next)=>{
   res.status(200).json({
     success: true,
     message: "Role updated successfully",
+    user
   });
 })
 
