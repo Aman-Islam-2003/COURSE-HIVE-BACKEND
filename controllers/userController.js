@@ -116,7 +116,6 @@ export const updateProfile = catchAsyncError(async (req, res, next) => {
 });
 
 export const updateProfilePicture = catchAsyncError(async (req, res, next) => {
-
   const file = req.file;
   const user = await User.findById(req.user._id);
 
@@ -128,7 +127,7 @@ export const updateProfilePicture = catchAsyncError(async (req, res, next) => {
   user.avatar = {
     public_id: myCloud.public_id,
     url: myCloud.secure_url,
-  }
+  };
   await user.save();
   res.status(200).json({
     success: true,
@@ -157,111 +156,124 @@ export const forgetPassword = catchAsyncError(async (req, res, next) => {
 });
 
 export const resetPassword = catchAsyncError(async (req, res, next) => {
-    const {token} = req.params;
-    
-
+  const { token } = req.params;
 
   //cloudinary
   res.status(200).json({
     success: true,
     message: "Profile Picture updated successfully",
-    token
+    token,
   });
 });
 
-
-export const addToPlaylist = catchAsyncError(async (req,res,next)=>{
+export const addToPlaylist = catchAsyncError(async (req, res, next) => {
   const user = await User.findById(req.user._id);
 
   const course = await Course.findById(req.body.id);
-  if(!course){
+  if (!course) {
     return next(new ErrorHandler("Course doesn't exists", 401));
   }
 
-  const itemExist = user.playlist.find((item)=>{
-    if(item.course.toString()===course._id.toString()){
-        return true;
+  const itemExist = user.playlist.find((item) => {
+    if (item.course.toString() === course._id.toString()) {
+      return true;
     }
-  })
-  if(itemExist){
+  });
+  if (itemExist) {
     return next(new ErrorHandler("Item already exists", 409));
   }
   user.playlist.push({
     course: course._id,
-    poster: course.poster.url
+    poster: course.poster.url,
   });
-  
+
   await user.save();
   res.status(200).json({
     success: true,
     message: "Added to playlist",
-  });  
+  });
 });
 
-export const removeFromPlaylist = catchAsyncError(async (req,res,next)=>{
-    const user = await User.findById(req.user._id);
+export const removeFromPlaylist = catchAsyncError(async (req, res, next) => {
+  const user = await User.findById(req.user._id);
 
-    const course = await Course.findById(req.query.id);
-    if(!course){
-      return next(new ErrorHandler("Course doesn't exists", 401));
+  const course = await Course.findById(req.query.id);
+  if (!course) {
+    return next(new ErrorHandler("Course doesn't exists", 401));
+  }
+
+  const newPlayList = user.playlist.filter((item) => {
+    if (item.course.toString() !== course._id.toString()) {
+      return item;
     }
-  
-    const newPlayList = user.playlist.filter((item)=>{
-      if(item.course.toString() !== course._id.toString()){
-          return item;
-      }
-    })
-    
-    user.playlist = newPlayList;
-    await user.save();
-    res.status(200).json({
-      success: true,
-      message: "Removed from playlist",
-    });
-})
+  });
+
+  user.playlist = newPlayList;
+  await user.save();
+  res.status(200).json({
+    success: true,
+    message: "Removed from playlist",
+  });
+});
 
 //Admin Routes
-export const getAllUsers = catchAsyncError(async (req,res,next)=>{
+export const getAllUsers = catchAsyncError(async (req, res, next) => {
   const users = await User.find({});
 
   res.status(200).json({
     success: true,
     message: "Users retrived successfully",
-    users
+    users,
   });
-})
+});
 
-export const updateUserRole = catchAsyncError(async (req,res,next)=>{
+export const updateUserRole = catchAsyncError(async (req, res, next) => {
   const user = await User.findById(req.params.id);
-  if(!user){
+  if (!user) {
     return next(new ErrorHandler("user doesn't exists", 401));
   }
 
-  if(user.role != 'admin'){
+  if (user.role != "admin") {
     user.role = "admin";
-  } else{
-    user.role = "user"
+  } else {
+    user.role = "user";
   }
 
- await user.save();
+  await user.save();
   res.status(200).json({
     success: true,
     message: "Role updated successfully",
-    user
+    user,
   });
-})
+});
 
-export const deleteUser = catchAsyncError(async (req,res,next)=>{
+export const deleteUser = catchAsyncError(async (req, res, next) => {
   const user = await User.findById(req.params.id);
-  if(!user){
+  if (!user) {
     return next(new ErrorHandler("user doesn't exists", 401));
   }
 
   await cloudinary.v2.uploader.destroy(user.avatar.public_id);
 
- await user.remove();
+  await user.remove();
   res.status(200).json({
     success: true,
     message: "User deleted successfully",
   });
-})
+});
+export const deleteMyProfile = catchAsyncError(async (req, res, next) => {
+  const user = await User.find(req.user._id);
+
+  await cloudinary.v2.uploader.destroy(user.avatar.public_id);
+
+  await user.remove();
+  res
+    .status(200)
+    .cookie("token", null, {
+      expires: new Date(Date.now()),
+    })
+    .json({
+      success: true,
+      message: "Profile deleted successfully",
+    });
+});
