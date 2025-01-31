@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import validator from "validator";
+import crypto from "crypto";
 
 const userSchema = new mongoose.Schema({
   name: {
@@ -48,9 +49,17 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
-  ResetPasswordToken: String,
-  ResetPasswordExpie: String,
+  resetPasswordToken: String,
+  resetPasswordExpire: String,
 });
+
+userSchema.pre("save", async function(){
+  if(!this.isModified("password")){
+      next();
+  }
+  this.password = await bcrypt.hash(this.password, 10);
+  next();
+})
 
 userSchema.method.getJWTToken = function(){
    return jwt.sign({id: this._id}, process.env.JWT_SECRET,{
@@ -59,4 +68,11 @@ userSchema.method.getJWTToken = function(){
    //first give payload the data you want to convert
 }
 
+userSchema.method.getResetToken = function(){
+  const resetToken = crypto.randomBytes(20).toString("hex");
+   this.resetPasswordToken = crypto.createHash("sha256").update(resetToken).digest("hex");
+
+   this.resetPasswordExpire = Date.now()+15*60*1000;//next 15 mins
+  return resetToken;
+}
 export const User = mongoose.model("User", userSchema);
