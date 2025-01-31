@@ -4,7 +4,9 @@ import { Course } from "../models/Course.js";
 import ErrorHandler from "../utils/errorHandler.js";
 import { sendEmail } from "../utils/sendEmail.js";
 import { sendToken } from "../utils/sendToken.js";
+import cloudinary from "cloudinary";
 import bcrypt from "bcrypt";
+import getDataUri from "../utils/dataUri.js";
 
 export const register = catchAsyncError(async (req, res, next) => {
   const { name, email, password } = req.body;
@@ -17,16 +19,20 @@ export const register = catchAsyncError(async (req, res, next) => {
     return next(new ErrorHandler("User already exists", 409));
   }
   //upload file n cloudinary
+  const file = req.file;
+
+  const fileUri = getDataUri(file);
+  const myCloud = await cloudinary.v2.uploader.upload(fileUri.content);
+
   user = await User.create({
     name,
     email,
     password,
     avatar: {
-      public_id: "tempid",
-      url: "tempurl",
+      public_id: myCloud.public_id,
+      url: myCloud.secure_url,
     },
   });
-
   sendToken(res, user, "Registered successfully", 201);
 });
 
@@ -110,7 +116,19 @@ export const updateProfile = catchAsyncError(async (req, res, next) => {
 });
 
 export const updateProfilePicture = catchAsyncError(async (req, res, next) => {
-  //cloudinary
+  const file = req.file;
+  const user = await User.findById(req.user._id);
+
+  const fileUri = getDataUri(file);
+  const myCloud = await cloudinary.v2.uploader.upload(fileUri.content);
+
+  await cloudinary.v2.uploader.destroy(user.avatar.public_id);
+
+  user.avatar = {
+    public_id: myCloud.public_id,
+    url: myCloud.secure_url,
+  };
+  await user.save();
   res.status(200).json({
     success: true,
     message: "Profile Picture updated successfully",
@@ -138,65 +156,124 @@ export const forgetPassword = catchAsyncError(async (req, res, next) => {
 });
 
 export const resetPassword = catchAsyncError(async (req, res, next) => {
-    const {token} = req.params;
-    
-
+  const { token } = req.params;
 
   //cloudinary
   res.status(200).json({
     success: true,
     message: "Profile Picture updated successfully",
-    token
+    token,
   });
 });
 
-
-export const addToPlaylist = catchAsyncError(async (req,res,next)=>{
+export const addToPlaylist = catchAsyncError(async (req, res, next) => {
   const user = await User.findById(req.user._id);
 
   const course = await Course.findById(req.body.id);
-  if(!course){
+  if (!course) {
     return next(new ErrorHandler("Course doesn't exists", 401));
   }
 
-  const itemExist = user.playlist.find((item)=>{
-    if(item.course.toString()===course._id.toString()){
-        return true;
+  const itemExist = user.playlist.find((item) => {
+    if (item.course.toString() === course._id.toString()) {
+      return true;
     }
-  })
-  if(itemExist){
+  });
+  if (itemExist) {
     return next(new ErrorHandler("Item already exists", 409));
   }
   user.playlist.push({
     course: course._id,
-    poster: course.poster.url
+    poster: course.poster.url,
   });
-  
+
   await user.save();
   res.status(200).json({
     success: true,
     message: "Added to playlist",
-  });  
+  });
 });
 
-export const removeFromPlaylist = catchAsyncError(async (req,res,next)=>{
-    const user = await User.findById(req.user._id);
+export const removeFromPlaylist = catchAsyncError(async (req, res, next) => {
+  const user = await User.findById(req.user._id);
 
-    const course = await Course.findById(req.query.id);
-    if(!course){
-      return next(new ErrorHandler("Course doesn't exists", 401));
+  const course = await Course.findById(req.query.id);
+  if (!course) {
+    return next(new ErrorHandler("Course doesn't exists", 401));
+  }
+
+  const newPlayList = user.playlist.filter((item) => {
+    if (item.course.toString() !== course._id.toString()) {
+      return item;
     }
-  
-    const newPlayList = user.playlist.filter((item)=>{
-      if(item.course.toString() !== course._id.toString()){
-          return item;
-      }
+  });
+
+  user.playlist = newPlayList;
+  await user.save();
+  res.status(200).json({
+    success: true,
+    message: "Removed from playlist",
+  });
+});
+
+//Admin Routes
+export const getAllUsers = catchAsyncError(async (req, res, next) => {
+  const users = await User.find({});
+
+  res.status(200).json({
+    success: true,
+    message: "Users retrived successfully",
+    users,
+  });
+});
+
+export const updateUserRole = catchAsyncError(async (req, res, next) => {
+  const user = await User.findById(req.params.id);
+  if (!user) {
+    return next(new ErrorHandler("user doesn't exists", 401));
+  }
+
+  if (user.role != "admin") {
+    user.role = "admin";
+  } else {
+    user.role = "user";
+  }
+
+  await user.save();
+  res.status(200).json({
+    success: true,
+    message: "Role updated successfully",
+    user,
+  });
+});
+
+export const deleteUser = catchAsyncError(async (req, res, next) => {
+  const user = await User.findById(req.params.id);
+  if (!user) {
+    return next(new ErrorHandler("user doesn't exists", 401));
+  }
+
+  await cloudinary.v2.uploader.destroy(user.avatar.public_id);
+
+  await user.remove();
+  res.status(200).json({
+    success: true,
+    message: "User deleted successfully",
+  });
+});
+export const deleteMyProfile = catchAsyncError(async (req, res, next) => {
+  const user = await User.find(req.user._id);
+
+  await cloudinary.v2.uploader.destroy(user.avatar.public_id);
+
+  await user.remove();
+  res
+    .status(200)
+    .cookie("token", null, {
+      expires: new Date(Date.now()),
     })
-    
-    user.playlist = newPlayList;
-    await user.save();
-    res.status(200).json({
+    .json({
       success: true,
-      message: "Removed from playlist",
+      message: "Profile deleted successfully",
     });
-})
+});

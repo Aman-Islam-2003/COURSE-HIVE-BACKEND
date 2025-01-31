@@ -5,9 +5,9 @@ import cloudinary from "cloudinary";
 connectDB();
 
 cloudinary.v2.config({
-   cloud_name:dssau0rhs,
-   api_key: 835644199477898,
-   api_secret:WgB7tzMBgZh0KAi3bhBM-DaDiU8 
+   cloud_name:process.env.CLOUDINARY_CLIENT_NAME,
+   api_key: process.env.CLOUDINARY_CLIENT_API,
+   api_secret:process.env.CLOUDINARY_CLIENT_SECRET 
 })
 
 const PORT = process.env.PORT;
